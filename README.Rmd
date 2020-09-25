@@ -38,18 +38,80 @@ library(incidenceflow)
 ## basic example code
 ```
 
-What is special about using `README.Rmd` instead of just `README.md`? You can include R chunks like so:
+### incidence(cially) usefull
 
-```{r cars}
-summary(cars)
+- `get_info_tidy`: generates a tibble of `incidence::get_info()`. [clink here for more information](https://www.repidemicsconsortium.org/incidence/index.html).
+- `tidy_incidence`: generates a complete summary tibble from incidence fit paramteter estimates
+- `glance_incidence`: generates a complete summary tibble from incidence fit model performance
+
+
+```{r}
+# packages ----------------------------------------------------------------
+
+if(!require("devtools")) install.packages("devtools")
+# if(!require("avallecam")) devtools::install_github("avallecam/avallecam") #improvements
+
+library(tidyverse) #magrittr and purrr packages
+library(lubridate) #ymd
+library(outbreaks) #sample data
+library(incidence) #core functions
+
+# example outbreak --------------------------------------------------------
+
+dat <- ebola_sim$linelist$date_of_onset
+i.7 <- incidence(dat, interval=7)
+# plot(i.7)
+f1 <- fit(i.7[1:20])
+f2 <- fit_optim_split(i.7)
+
+# broom like functions ----------------------------------------------------
+
+# tidy
+f1 %>% tidy_incidence()
+f2 %>% pluck("fit") %>% tidy_incidence()
+
+# glance
+f1 %>% glance_incidence()
+f2 %>% pluck("fit") %>% glance_incidence()
+
+
+# using purrr -------------------------------------------------------------
+
+# using purrr::map family function allows easy stratification
+# for gender and could be extrapolated to administrative levels
+# in country level analysis
+
+incidence_purrr <- ebola_sim$linelist %>% 
+  as_tibble() %>% 
+  #filter observations explicitly before incidence()
+  filter(date_of_onset<lubridate::ymd(20141007)) %>% 
+  #stratify by any group of covariates
+  group_by(gender) %>% 
+  nest() %>% 
+  mutate(incidence_strata=map(.x = data,
+                              .f = ~incidence(.x %>% pull(date_of_onset),
+                                              interval=7))) %>% 
+  mutate(strata_fit=map(.x = incidence_strata,
+                            .f = fit)) %>% 
+  mutate(strata_fit_tidy=map(.x = strata_fit,
+                                  .f = tidy_incidence)) %>% 
+  mutate(strata_fit_glance=map(.x = strata_fit,
+                                       .f = glance_incidence))
+
+# keep only the tibbles
+incidence_purrr_tibble <- incidence_purrr %>% 
+  select(-data,-incidence_strata,-strata_fit)
+
+# tidy_incidence output
+incidence_purrr_tibble %>% 
+  unnest(cols = c(strata_fit_tidy))
+
+# glance_incidence output
+incidence_purrr_tibble %>% 
+  unnest(cols = c(strata_fit_glance))
 ```
 
-You'll still need to render `README.Rmd` regularly, to keep `README.md` up-to-date.
 
-You can also embed plots, for example:
+## A more update approach here
 
-```{r pressure, echo = FALSE}
-plot(pressure)
-```
-
-In that case, don't forget to commit and push the resulting figure files, so they display on GitHub!
+look at this project: https://github.com/reconhub/incidence2

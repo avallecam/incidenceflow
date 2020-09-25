@@ -3,8 +3,10 @@ title: "workflow01"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{workflow01}
-  %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r, include = FALSE}
@@ -24,17 +26,93 @@ library(readxl)
 library(lubridate)
 library(aweek)
 library(janitor)
-library(avallecam)
+# library(avallecam)
 library(compareGroups)
 library(incidence)
 library(patchwork)
-library(avallecam)
+# library(avallecam)
 library(EpiEstim)
 library(colorspace)
 theme_set(theme_bw())
 ```
 
+```{r,eval=FALSE}
+# example outbreak --------------------------------------------------------
+
+library(outbreaks) #sample data
+library(incidence) #core functions
+# library(avallecam) #improvements
+outbreak_data <- ebola_sim$linelist$date_of_onset
+```
+
 ```{r}
+# packages ----------------------------------------------------------------
+
+if(!require("devtools")) install.packages("devtools")
+# if(!require("avallecam")) devtools::install_github("avallecam/avallecam") #improvements
+
+library(tidyverse) #magrittr and purrr packages
+library(lubridate) #ymd
+library(outbreaks) #sample data
+library(incidence) #core functions
+
+# example outbreak --------------------------------------------------------
+
+dat <- ebola_sim$linelist$date_of_onset
+i.7 <- incidence(dat, interval=7)
+# plot(i.7)
+f1 <- fit(i.7[1:20])
+f2 <- fit_optim_split(i.7)
+
+# broom like functions ----------------------------------------------------
+
+# tidy
+f1 %>% tidy_incidence()
+f2 %>% pluck("fit") %>% tidy_incidence()
+
+# glance
+f1 %>% glance_incidence()
+f2 %>% pluck("fit") %>% glance_incidence()
+
+
+# using purrr -------------------------------------------------------------
+
+# using purrr::map family function allows easy stratification
+# for gender and could be extrapolated to administrative levels
+# in country level analysis
+
+incidence_purrr <- ebola_sim$linelist %>% 
+  as_tibble() %>% 
+  #filter observations explicitly before incidence()
+  filter(date_of_onset<lubridate::ymd(20141007)) %>% 
+  #stratify by any group of covariates
+  group_by(gender) %>% 
+  nest() %>% 
+  mutate(incidence_strata=map(.x = data,
+                              .f = ~incidence(.x %>% pull(date_of_onset),
+                                              interval=7))) %>% 
+  mutate(strata_fit=map(.x = incidence_strata,
+                            .f = fit)) %>% 
+  mutate(strata_fit_tidy=map(.x = strata_fit,
+                                  .f = tidy_incidence)) %>% 
+  mutate(strata_fit_glance=map(.x = strata_fit,
+                                       .f = glance_incidence))
+
+# keep only the tibbles
+incidence_purrr_tibble <- incidence_purrr %>% 
+  select(-data,-incidence_strata,-strata_fit)
+
+# tidy_incidence output
+incidence_purrr_tibble %>% 
+  unnest(cols = c(strata_fit_tidy))
+
+# glance_incidence output
+incidence_purrr_tibble %>% 
+  unnest(cols = c(strata_fit_glance))
+```
+
+
+```{r, eval=FALSE}
 #### execute -------------------------------
 
 # vigilancia_covid19
@@ -97,13 +175,13 @@ nest_dynamics <- vigilancia_covid19 %>%
   
   # tidy + glance for fit and incidence
   mutate(incidence_tidy=map(.x = incidence_fit,
-                            .f = possibly(avallecam::tidy_incidence,tibble()))) %>% 
+                            .f = possibly(tidy_incidence,tibble()))) %>% 
   mutate(incidence_glance=map(.x = incidence_fit,
-                              .f = possibly(avallecam::glance_incidence,tibble()))) %>% 
+                              .f = possibly(glance_incidence,tibble()))) %>% 
   mutate(incidence_split_tidy=map(.x = incidence_split_fit,
-                            .f = possibly(avallecam::tidy_incidence,tibble()))) %>% 
+                            .f = possibly(tidy_incidence,tibble()))) %>% 
   mutate(incidence_split_glance=map(.x = incidence_split_fit,
-                              .f = possibly(avallecam::glance_incidence,tibble()))) %>% 
+                              .f = possibly(glance_incidence,tibble()))) %>% 
   
   # unify tidy and glance
   mutate(one_incidence_fit=if_else(incidence_split_real=="y",
@@ -157,7 +235,7 @@ nest_dynamics <- vigilancia_covid19 %>%
          date_lastlag_weeks)
 ```
 
-```{r}
+```{r,eval=FALSE}
 #### nested figures -------------------------------
 department_transmission <- nest_dynamics %>% 
   mutate(nm_depa_nest=nm_depa) %>% 
@@ -173,7 +251,7 @@ department_transmission <- nest_dynamics %>%
   mutate(tab03=map(data,nested_table_03))
 ```
 
-```{r}
+```{r,eval=FALSE}
 region_name <- "lima_metropolitana"
 
 department_transmission %>% 
@@ -200,7 +278,7 @@ department_transmission %>%
   pull(tab03) %>% pluck(1)
 ```
 
-```{r}
+```{r,eval=FALSE}
 nest_dynamics %>%
   slice(1) %>%
   pull(incidence_fit_figure) %>%

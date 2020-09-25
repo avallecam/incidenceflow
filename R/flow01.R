@@ -1,43 +1,36 @@
-#' tidy up incidence outputs
+#' MAIN TITLE
 #'
-#' @description functions to get tibble outputs from incidence package
+#' @description main description
 #'
-#' @describeIn incidence_pull generates a tibble of incidence::get_info()
+#' @describeIn incidence_pull specific description
 #'
-#' @param data
-#' @param variable_date
-#' @param data
-#' @param fit
-#' @param epiestim_output
-#' @param epiestim_tibble_rt
-#' @param y_breaks
-#' @param date_breaks
-#' @param date_start
-#' @param date_end
-#' @param nombre_area
-#' @param date_start
-#' @param date_end
-#' @param nombre_area
-#' @param nest_level
-#' @param high_level
-#' @param order
-#' @param point
-#' @param xmax
-#' @param xmin
+#' @param data data
+#' @param variable_date variable_date
+#' @param fit fit
+#' @param epiestim_output epiestim_output
+#' @param epiestim_tibble_rt epiestim_tibble_rt
+#' @param y_breaks y_breaks
+#' @param date_breaks date_breaks
+#' @param date_start date_start
+#' @param date_end date_end
+#' @param nombre_area nombre_area
+#' @param date_start date_start
+#' @param date_end date_end
+#' @param nombre_area nombre_area
+#' @param nest_level nest_level
+#' @param high_level high_level
+#' @param order order
+#' @param point point
+#' @param xmax xmax
+#' @param xmin xmin
 #'
 #' @return incidence workflow!
 #'
-#' @import tidyverse
-#' @import readxl
-#' @import lubridate
 #' @import aweek
 #' @import janitor
-#' @import avallecam
-#' @import compareGroups
 #' @import incidence
-#' @import patchwork
-#' @import avallecam
 #' @import EpiEstim
+#' @import patchwork
 #' @import colorspace
 #'
 #' @export incidence_pull
@@ -67,6 +60,9 @@ incidence_pull <- function(data,variable_date,...) {
 #   incidence_data %>%
 #   possibly(incidence::fit_optim_split,list(split=lubridate::ymd(00000000)))
 # }
+
+#' @describeIn incidence_pull create figure: incidence original plot number 1
+#' @inheritParams incidence_pull
 
 dynamic_output_figure <- function(data,fit,
                                   date_start,date_end,
@@ -108,6 +104,9 @@ dynamic_output_figure <- function(data,fit,
   return(figure_dynamics)
 }
 
+#' @describeIn incidence_pull create figure: incidence original plot number 2
+#' @inheritParams incidence_pull
+
 incidence_output_figure <- function(data,#fit,
                                     date_start,date_end,
                                     nombre_area,date_breaks = "7 day") {
@@ -148,6 +147,9 @@ incidence_output_figure <- function(data,#fit,
   return(figure_dynamics)
 }
 
+#' @describeIn incidence_pull Rt estimates: one table with dates and R values
+#' @inheritParams incidence_pull
+
 epiestim_tibble_rt <- function(epiestim_output) {
   date_column <- epiestim_output %>%
     pluck("dates") %>%
@@ -163,6 +165,9 @@ epiestim_tibble_rt <- function(epiestim_output) {
     select(date_rt=value,everything())
 }
 
+#' @describeIn incidence_pull Rt estimates: filter and select data
+#' @inheritParams incidence_pull
+
 epiestim_current_rt <- function(epiestim_tibble_rt) {
   epiestim_tibble_rt %>%
     filter(t_end==max(t_end)) %>%
@@ -172,6 +177,9 @@ epiestim_current_rt <- function(epiestim_tibble_rt) {
            rt_conf.upper=quantile_0_975_r) #%>%
   # mutate(variable="Número reproductivo efectivo (Rt) *")
 }
+
+#' @describeIn incidence_pull create figure: time serie of Rt
+#' @inheritParams incidence_pull
 
 figure_tsibble_rt <- function(epiestim_tibble_rt,y_breaks=10,date_breaks = "7 day") {
   epiestim_tibble_rt %>%
@@ -193,6 +201,9 @@ figure_tsibble_rt <- function(epiestim_tibble_rt,y_breaks=10,date_breaks = "7 da
     labs(title = "Estimated R",y = "Rt",color="",fill="")
 }
 
+#' @describeIn incidence_pull other description
+#' @inheritParams incidence_pull
+
 cdc_datatable_html <- function(data) {
   data %>%
     mutate_if(.predicate = is.numeric,.funs = ~round(.x,2)) %>%
@@ -200,6 +211,9 @@ cdc_datatable_html <- function(data) {
       options = list(
         language = list(url = '//cdn.datatables.net/plug-ins/1.10.11/i18n/Spanish.json')))
 }
+
+#' @describeIn incidence_pull create figure: dot whiskers ggplot
+#' @inheritParams incidence_pull
 
 # cdcper::cdc_dotwhiskers_plot()
 cdc_dotwhiskers_ggplot <- function(data,
@@ -223,6 +237,8 @@ cdc_dotwhiskers_ggplot <- function(data,
     theme(legend.position="bottom")
 }
 
+#' @describeIn incidence_pull figure 1: incidence plot
+#' @inheritParams incidence_pull
 
 nested_figure_01 <- function(data) {
   data %>%
@@ -237,6 +253,9 @@ nested_figure_01 <- function(data) {
     labs(title = "Incidence")
 }
 
+#' @describeIn incidence_pull figure 2: time serie of Rt per strata
+#' @inheritParams incidence_pull
+
 nested_figure_02 <- function(data) {
   data %>%
     select(cd_dist,tsibble_rt,starts_with("cd_"),starts_with("nm_")) %>%
@@ -246,6 +265,9 @@ nested_figure_02 <- function(data) {
     facet_wrap(~nm_dist,scales = "free_y") +
     theme(legend.position = "none")
 }
+
+#' @describeIn incidence_pull figure 3: dot-whiskers plot of each strata
+#' @inheritParams incidence_pull
 
 nested_figure_03 <- function(data) {
   data %>%
@@ -260,6 +282,9 @@ nested_figure_03 <- function(data) {
     labs(caption = "* A 14 días hacia atrás por la mediana del tiempo de rezago\nentre inicio de síntomas y confirmación de caso.",
          x="Rt actual",y="Distrito - Ubigeo",size="Número\nde casos")
 }
+
+#' @describeIn incidence_pull figure 4: map of Rt per strata
+#' @inheritParams incidence_pull
 
 nested_figure_04 <- function(data) {
 
@@ -294,6 +319,9 @@ nested_figure_04 <- function(data) {
 
 }
 
+#' @describeIn incidence_pull table 1: growth rate and doubling time. includes halving time if there is a split
+#' @inheritParams incidence_pull
+
 nested_table_01 <- function(data) {
   data %>%
     select(cd_dist,starts_with("nm_"),one_incidence_tidy,date_split_peak) %>%
@@ -302,6 +330,9 @@ nested_table_01 <- function(data) {
     cdc_datatable_html()
 }
 
+#' @describeIn incidence_pull table 2: goodness of fit per strata
+#' @inheritParams incidence_pull
+
 nested_table_02 <- function(data) {
   data %>%
     select(cd_dist,starts_with("nm_"),one_incidence_glance) %>%
@@ -309,6 +340,9 @@ nested_table_02 <- function(data) {
     select(-(df:df.residual),-sigma,-statistic) %>%
     cdc_datatable_html()
 }
+
+#' @describeIn incidence_pull table 3: Rt per strata
+#' @inheritParams incidence_pull
 
 nested_table_03 <- function(data) {
   data %>%
