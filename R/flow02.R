@@ -182,34 +182,36 @@ create_nest_summary <- function(nest_dynamics,time_limit_fig02=90) {
 
   for (i in 1:nrow(nested_major)) {
 
+    out <- nested_major %>%
+
+      slice(i) %>%
+
+      mutate(fig01=map(data,nested_figure_01,
+                       strata=strata_minor)) %>%
+      mutate(fig02=map(data,nested_figure_02,
+                       strata=strata_minor,
+                       date_lastone=date_lastone,
+                       limit_figure=time_limit_fig02)) %>%
+      mutate(fig03=map(data,nested_figure_03,
+                       strata_major=strata_major,
+                       strata_minor=strata_minor,
+                       strata_minor_code=strata_minor_code)) %>%
+      # mutate(fig04=map(data,nested_figure_04,
+      #                  geometry = geometry, # -------------------- # cambio
+      #                  strata_major=strata_major,
+      #                  strata_minor=strata_minor)) %>%
+      # pull(fig01) %>% pluck()
+      mutate(tab01=map(data,nested_table_01)) %>%
+      mutate(tab02=map(data,nested_table_02)) %>%
+      mutate(tab03=map(data,nested_table_03)) %>%
+      mutate(tab04=map(data,nested_table_04)) %>%
+
+      # union all outputs
+      union_all(out)
+
   }
 
-  out <- nested_major %>%
-
-    slice(i) %>%
-
-    mutate(fig01=map(data,nested_figure_01,
-                     strata=strata_minor)) %>%
-    mutate(fig02=map(data,nested_figure_02,
-                     strata=strata_minor,
-                     date_lastone=date_lastone,
-                     limit_figure=time_limit_fig02)) %>%
-    mutate(fig03=map(data,nested_figure_03,
-                     strata_major=strata_major,
-                     strata_minor=strata_minor,
-                     strata_minor_code=strata_minor_code)) %>%
-    # mutate(fig04=map(data,nested_figure_04,
-    #                  geometry = geometry, # -------------------- # cambio
-    #                  strata_major=strata_major,
-    #                  strata_minor=strata_minor)) %>%
-    # pull(fig01) %>% pluck()
-    mutate(tab01=map(data,nested_table_01)) %>%
-    mutate(tab02=map(data,nested_table_02)) %>%
-    mutate(tab03=map(data,nested_table_03)) %>%
-    mutate(tab04=map(data,nested_table_04)) %>%
-
-    # union all outputs
-    union_all(out)
+  return(out)
 
 }
 
@@ -242,6 +244,8 @@ create_nest_summary_map <- function(nest_dynamics,
       # union all outputs
       union_all(out)
   }
+
+  return(out)
 
 }
 
