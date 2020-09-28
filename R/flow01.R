@@ -13,6 +13,8 @@
 #' @import patchwork
 #' @import colorspace
 #'
+#' @importFrom lubridate %m-%
+#'
 #' @export pre_clean
 #' @export covid_pre_cleaning
 #' @export incidence_nest_clean
@@ -344,8 +346,11 @@ nested_figure_03 <- function(data,
            strata_major_x={{strata_major}},
            strata_minor_code_x={{strata_minor_code}}) %>%
     select(#starts_with("nm_"),
-      strata_major_x,strata_minor_x,strata_minor_code_x,
-      n_pos_clean,current_rt) %>%
+      strata_major_x,
+      strata_minor_x,
+      strata_minor_code_x,
+      n_pos_clean,
+      current_rt) %>%
     unnest(cols = c("current_rt")) %>%
     cdc_dotwhiskers_ggplot(nest_level = str_c(strata_minor_x," - ",
                                               strata_minor_code_x), # -------------- cuidado

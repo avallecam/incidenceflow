@@ -17,6 +17,8 @@ create_nest_dynamics <- function(linelist,
                                  disease_std_si = 4.75,
                                  issue_number_set = 40) {
 
+  # future::plan(future::multisession, workers = future::availableCores())
+
   linelist <- linelist %>%
     # preidentify stratification variables # -------------------------------------------- extra
     rename(strata_major={{strata_major}},
@@ -165,13 +167,27 @@ create_nest_dynamics <- function(linelist,
 
 create_nest_summary <- function(nest_dynamics,time_limit_fig02=90) {
 
-  nest_dynamics %>%
+  # future::plan(future::multisession, workers = future::availableCores())
+
+  out <- tibble()
+
+  nested_major <- nest_dynamics %>%
+
     # mutate(nm_pais="peru") %>%
     # mutate(strata_major=nm_pais,
     #        strata_minor=nm_depa) %>% # -------------------------------------------- extra
     group_by(strata_major) %>%
     nest() %>%
-    ungroup() %>%
+    ungroup()
+
+  for (i in 1:nrow(nested_major)) {
+
+  }
+
+  out <- nested_major %>%
+
+    slice(i) %>%
+
     mutate(fig01=map(data,nested_figure_01,
                      strata=strata_minor)) %>%
     mutate(fig02=map(data,nested_figure_02,
@@ -190,7 +206,10 @@ create_nest_summary <- function(nest_dynamics,time_limit_fig02=90) {
     mutate(tab01=map(data,nested_table_01)) %>%
     mutate(tab02=map(data,nested_table_02)) %>%
     mutate(tab03=map(data,nested_table_03)) %>%
-    mutate(tab04=map(data,nested_table_04))
+    mutate(tab04=map(data,nested_table_04)) %>%
+
+    # union all outputs
+    union_all(out)
 
 }
 
@@ -204,11 +223,25 @@ create_nest_summary_map <- function(nest_dynamics,
     rename(strata_major={{strata_major}},
            strata_minor={{strata_minor}})
 
-  create_nest_summary(nest_dynamics = nest_dynamics) %>%
-    mutate(fig04=map(data,nested_figure_04,
-                     geometry = geometry, # -------------------- # cambio
-                     strata_major=strata_major,
-                     strata_minor=strata_minor))
+  # add
+  out <- tibble()
+  # add
+  nested_major <- create_nest_summary(nest_dynamics = nest_dynamics)
+
+  for (i in 1:nrow(nested_major)) {
+    out <- nested_major %>%
+
+      #add
+      slice(i) %>%
+
+      mutate(fig04=map(data,nested_figure_04,
+                       geometry = geometry, # -------------------- # cambio
+                       strata_major=strata_major,
+                       strata_minor=strata_minor)) %>%
+
+      # union all outputs
+      union_all(out)
+  }
 
 }
 
