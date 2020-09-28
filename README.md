@@ -296,6 +296,8 @@ nest_summary %>%
 #> # ... with 1 more variable: `2015-W15` <chr>
 ```
 
-## A more updated approach here
+## Updated approaches
 
-look at this project: <https://github.com/reconhub/incidence2>
+  - on incidence: <https://github.com/reconhub/incidence2>
+
+  - on time-varying transmission: <https://epiforecasts.io/EpiNow2/>
