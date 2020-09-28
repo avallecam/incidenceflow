@@ -4,26 +4,6 @@
 #'
 #' @describeIn incidence_pull specific description
 #'
-#' @param data data
-#' @param variable_date variable_date
-#' @param fit fit
-#' @param epiestim_output epiestim_output
-#' @param epiestim_tibble_rt epiestim_tibble_rt
-#' @param y_breaks y_breaks
-#' @param date_breaks date_breaks
-#' @param date_start date_start
-#' @param date_end date_end
-#' @param nombre_area nombre_area
-#' @param date_start date_start
-#' @param date_end date_end
-#' @param nombre_area nombre_area
-#' @param nest_level nest_level
-#' @param high_level high_level
-#' @param order order
-#' @param point point
-#' @param xmax xmax
-#' @param xmin xmin
-#'
 #' @return incidence workflow!
 #'
 #' @import aweek
@@ -33,14 +13,17 @@
 #' @import patchwork
 #' @import colorspace
 #'
+#' @export pre_clean
+#' @export covid_pre_cleaning
+#' @export incidence_nest_clean
+#' @export incidence_dates_mutate
 #' @export incidence_pull
 #' @export dynamic_output_figure
 #' @export incidence_output_figure
 #' @export epiestim_tibble_rt
 #' @export epiestim_current_rt
+#' @export epiestim_last5wk_rt
 #' @export figure_tsibble_rt
-#' @export cdc_datatable_html
-#' @export cdc_dotwhiskers_ggplot
 #' @export nested_figure_01
 #' @export nested_figure_02
 #' @export nested_figure_03
@@ -48,6 +31,111 @@
 #' @export nested_table_01
 #' @export nested_table_02
 #' @export nested_table_03
+#' @export nested_table_04
+#' @export cdc_dotwhiskers_ggplot
+#'
+
+#### tidier workflow -------------------------------
+
+cdc_dotwhiskers_ggplot <- function(data,
+                                   nest_level=nm_dist,
+                                   high_level=nm_depa,
+                                   order=n_pos_clean,
+                                   point=rt_estimate,
+                                   xmax=rt_conf.upper,
+                                   xmin=rt_conf.lower) {
+  data %>%
+    mutate(nest_level_var={{nest_level}}) %>%
+    mutate(high_level_var={{high_level}}) %>%
+    mutate(nest_level_var=fct_reorder(.f=nest_level_var,
+                                      .x={{point}})) %>%
+
+    ggplot(aes(x = {{point}},y = nest_level_var)) +
+    geom_point(aes(size={{order}}),color="red",alpha=0.7) +
+    geom_errorbarh(aes(xmax = {{xmax}}, xmin = {{xmin}})) +
+    facet_wrap(~high_level_var,scales = "free_x") +
+    theme(legend.position="bottom")
+}
+
+pre_clean <- function(data) {
+  data %>%
+    # mutate(import_case_x={{import_case_variable}}) %>%
+    # filter(import_case_x=="caso_local") %>%
+    filter(!is.na(date_incidence_case))
+}
+
+covid_pre_cleaning <- function(data) {
+  data %>%
+    # filter(local_importado=="caso_local") %>%
+    filter(!is.na(date_incidence_case))
+}
+
+incidence_nest_clean <- function(data, nest_level,
+                                 custom_pre_cleaning,
+                                 issue_number=issue_number_set) {
+
+  pre_clean <- custom_pre_cleaning
+
+  data %>%
+    group_by({{nest_level}}) %>%
+    nest() %>%
+    mutate(n_pre_clean=map_int(.x = data,.f = nrow)) %>%
+    mutate(data=map(.x = data,.f = pre_clean)) %>%
+    mutate(n_pos_clean=map_int(.x = data,.f = nrow)) %>%
+    filter(!is.na({{nest_level}})) %>%
+    ungroup() %>%
+    filter(n_pos_clean > issue_number)
+}
+
+incidence_dates_mutate <- function(data,
+                                   variable_date,
+                                   date_of_analysis_today, #Sys.Date()
+                                   time_delay_days=time_delay_set) {
+
+  sgb19 <- data %>%
+    mutate(fecha_de_inicio_de_sintomas_corregido={{variable_date}})
+
+  # first --------------------
+  date_firstone <- sgb19 %>%
+    filter(fecha_de_inicio_de_sintomas_corregido==
+             min(fecha_de_inicio_de_sintomas_corregido)) %>%
+    distinct(fecha_de_inicio_de_sintomas_corregido) %>%
+    pull(fecha_de_inicio_de_sintomas_corregido)
+
+  # last --------------------
+  date_lastone <- sgb19 %>%
+    filter(fecha_de_inicio_de_sintomas_corregido==
+             max(fecha_de_inicio_de_sintomas_corregido)) %>%
+    distinct(fecha_de_inicio_de_sintomas_corregido) %>%
+    pull(fecha_de_inicio_de_sintomas_corregido)
+
+  # fecha analisis -------------------------
+  if (date_of_analysis_today==TRUE) {
+    date_today <- Sys.Date()
+  }
+
+  date_today <- date_lastone #Sys.Date()
+
+  # delay --------------------
+  date_with_lag_due_to_delay <- date_today %m-% days(time_delay_days)
+  # date_with_lag_due_to_incubation <- date_today %m-% weeks(time_delay_weeks)
+
+  # date_peak_of_cases <- sgb19 %>%
+  #   count(fecha_de_inicio_de_sintomas_corregido,sort = T) %>%
+  #   top_n(n = 1,wt = n) %>%
+  #   filter(fecha_de_inicio_de_sintomas_corregido==max(fecha_de_inicio_de_sintomas_corregido)) %>%
+  #   pull(fecha_de_inicio_de_sintomas_corregido)
+
+  tibble(
+    # date_today=date_today,
+    date_firstone=date_firstone,
+    date_lastone=date_lastone,
+    date_lastlag_days=date_with_lag_due_to_delay#,
+    # date_lastlag_weeks = date_with_lag_due_to_incubation,
+    # date_topn=date_peak_of_cases
+  ) %>%
+    return()
+}
 
 incidence_pull <- function(data,variable_date,...) {
   data %>%
@@ -60,9 +148,6 @@ incidence_pull <- function(data,variable_date,...) {
 #   incidence_data %>%
 #   possibly(incidence::fit_optim_split,list(split=lubridate::ymd(00000000)))
 # }
-
-#' @describeIn incidence_pull create figure: incidence original plot number 1
-#' @inheritParams incidence_pull
 
 dynamic_output_figure <- function(data,fit,
                                   date_start,date_end,
@@ -104,9 +189,6 @@ dynamic_output_figure <- function(data,fit,
   return(figure_dynamics)
 }
 
-#' @describeIn incidence_pull create figure: incidence original plot number 2
-#' @inheritParams incidence_pull
-
 incidence_output_figure <- function(data,#fit,
                                     date_start,date_end,
                                     nombre_area,date_breaks = "7 day") {
@@ -147,9 +229,6 @@ incidence_output_figure <- function(data,#fit,
   return(figure_dynamics)
 }
 
-#' @describeIn incidence_pull Rt estimates: one table with dates and R values
-#' @inheritParams incidence_pull
-
 epiestim_tibble_rt <- function(epiestim_output) {
   date_column <- epiestim_output %>%
     pluck("dates") %>%
@@ -162,11 +241,12 @@ epiestim_tibble_rt <- function(epiestim_output) {
     as_tibble() %>%
     janitor::clean_names() %>%
     left_join(date_column) %>%
-    select(date_rt=value,everything())
+    select(date_rt=value,everything()) %>%
+    # #media movil para suavizar tendendias
+    mutate(across(starts_with("rt_"),.fns = zoo::rollmean,
+                  k = 7,fill=NA,align = "right"))
+  # filter(!is.na(rt_estimate))
 }
-
-#' @describeIn incidence_pull Rt estimates: filter and select data
-#' @inheritParams incidence_pull
 
 epiestim_current_rt <- function(epiestim_tibble_rt) {
   epiestim_tibble_rt %>%
@@ -174,14 +254,41 @@ epiestim_current_rt <- function(epiestim_tibble_rt) {
     select(date_rt,
            rt_estimate=median_r,
            rt_conf.lower=quantile_0_025_r,
-           rt_conf.upper=quantile_0_975_r) #%>%
-  # mutate(variable="Número reproductivo efectivo (Rt) *")
+           rt_conf.upper=quantile_0_975_r)
 }
 
-#' @describeIn incidence_pull create figure: time serie of Rt
-#' @inheritParams incidence_pull
+epiestim_last5wk_rt <- function(epiestim_tibble_rt) {
+  epiestim_tibble_rt %>%
+    select(date_rt,
+           rt_estimate=median_r,
+           rt_conf.lower=quantile_0_025_r,
+           rt_conf.upper=quantile_0_975_r) %>%
+    # create week
+    mutate(aweek_rt=aweek::date2week(date_rt,
+                                     week_start = "Sunday",
+                                     floor_day = TRUE)) %>%
+    # calcular promedio por semana
+    group_by(aweek_rt) %>%
+    summarise(across(starts_with("rt_"),.fns = mean)) %>%
+    ungroup() %>%
+    # conservar las últimas 5 semanas
+    top_n(n = 5,wt = aweek_rt) %>%
+    serosurvey::unite_dotwhiskers(variable_dot = rt_estimate,
+                                  variable_low = rt_conf.lower,
+                                  variable_upp = rt_conf.upper,
+                                  digits_dot = 2,
+                                  digits_low = 2,
+                                  digits_upp = 2,
+                                  decimal_to_percent = FALSE) %>%
+    select(aweek_rt,unite=unite1_rt_estimate) %>%
+    mutate(unite=str_replace_all(unite," ","")) %>%
+    pivot_wider(names_from = aweek_rt,values_from = unite)
+}
 
-figure_tsibble_rt <- function(epiestim_tibble_rt,y_breaks=10,date_breaks = "7 day") {
+figure_tsibble_rt <- function(epiestim_tibble_rt,
+                              title_rt = "Estimated R",
+                              y_breaks=10,
+                              date_breaks = "7 day") {
   epiestim_tibble_rt %>%
     ggplot(aes(x = date_rt,y = mean_r)) +
     geom_ribbon(aes(ymin = quantile_0_025_r,
@@ -192,110 +299,76 @@ figure_tsibble_rt <- function(epiestim_tibble_rt,y_breaks=10,date_breaks = "7 da
     scale_color_grey(start = 0.1) +
     scale_fill_grey(start = 0.7) +
     scale_y_continuous(breaks = scales::pretty_breaks(n = y_breaks)) +
-    scale_x_date(date_breaks = date_breaks,date_labels = "%b-%d") +
+    # scale_x_date(date_breaks = date_breaks,date_labels = "%b-%d") +
     theme(axis.text.x = element_text(angle = 90, hjust = 1)#,
           # legend.background = element_rect(fill="white",size=0,
           #                                   linetype="solid",colour ="white"),
           #  legend.position = c(0.8, 0.7)
     ) +
-    labs(title = "Estimated R",y = "Rt",color="",fill="")
+    labs(title = {{title_rt}},y = "Rt",color="",fill="")
 }
 
-#' @describeIn incidence_pull other description
-#' @inheritParams incidence_pull
-
-cdc_datatable_html <- function(data) {
+nested_figure_01 <- function(data,strata) {
   data %>%
-    mutate_if(.predicate = is.numeric,.funs = ~round(.x,2)) %>%
-    DT::datatable(
-      options = list(
-        language = list(url = '//cdn.datatables.net/plug-ins/1.10.11/i18n/Spanish.json')))
-}
-
-#' @describeIn incidence_pull create figure: dot whiskers ggplot
-#' @inheritParams incidence_pull
-
-# cdcper::cdc_dotwhiskers_plot()
-cdc_dotwhiskers_ggplot <- function(data,
-                                   nest_level=nm_dist,
-                                   high_level=nm_depa,
-                                   order=n_pos_clean,
-                                   point=rt_estimate,
-                                   xmax=rt_conf.upper,
-                                   xmin=rt_conf.lower
-) {
-  data %>%
-    mutate(nest_level_var={{nest_level}}) %>%
-    mutate(high_level_var={{high_level}}) %>%
-    mutate(nest_level_var=fct_reorder(.f=nest_level_var,
-                                      .x={{point}})) %>%
-
-    ggplot(aes(x = {{point}},y = nest_level_var)) +
-    geom_point(aes(size={{order}}),color="red",alpha=0.7) +
-    geom_errorbarh(aes(xmax = {{xmax}}, xmin = {{xmin}})) +
-    facet_wrap(~high_level_var,scales = "free_x") +
-    theme(legend.position="bottom")
-}
-
-#' @describeIn incidence_pull figure 1: incidence plot
-#' @inheritParams incidence_pull
-
-nested_figure_01 <- function(data) {
-  data %>%
-    select(cd_dist,data) %>%
+    mutate(strata_minor_x={{strata}}) %>%
+    select(strata_minor_x,data) %>%
     unnest(cols = c(data)) %>%
-    ggplot(aes(x = fecha_de_inicio_de_sintomas_corregido)) +
+    ggplot(aes(x = date_incidence_case)) +
     geom_histogram(binwidth = 1) +
     # scale_x_date(date_breaks = "7 days",date_labels = "%b-%d") +
-    # theme(axis.text.x = element_text(angle = 90, hjust = 1) +
-    facet_wrap(~nm_dist,scales = "free_y"
-    ) +
-    labs(title = "Incidence")
+    facet_wrap(~strata_minor_x,scales = "free_y") +
+    labs(title = "Incidence") +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
 }
 
-#' @describeIn incidence_pull figure 2: time serie of Rt per strata
-#' @inheritParams incidence_pull
-
-nested_figure_02 <- function(data) {
+nested_figure_02 <- function(data,strata,date_lastone,limit_figure) {
   data %>%
-    select(cd_dist,tsibble_rt,starts_with("cd_"),starts_with("nm_")) %>%
+    mutate(strata_minor_x={{strata}},
+           date_lastone_x={{date_lastone}}) %>%
+    select(strata_minor_x,date_lastone_x,
+           tsibble_rt,starts_with("cd_"),starts_with("nm_")) %>%
     unnest(cols = c(tsibble_rt)) %>%
-    filter(date_rt>Sys.Date()-90) %>%
+    filter(date_rt>date_lastone_x-limit_figure) %>%
     figure_tsibble_rt(y_breaks = 5,date_breaks = "14 days") +
-    facet_wrap(~nm_dist,scales = "free_y") +
+    facet_wrap(~strata_minor_x,scales = "free_y") +
     theme(legend.position = "none")
 }
 
-#' @describeIn incidence_pull figure 3: dot-whiskers plot of each strata
-#' @inheritParams incidence_pull
-
-nested_figure_03 <- function(data) {
+nested_figure_03 <- function(data,
+                             strata_major,
+                             strata_minor,
+                             strata_minor_code,
+                             time_delay_days=time_delay_set) {
   data %>%
-    # select(nm_depa,data) %>%
-    # unnest(cols = c("data")) %>%
-    # select(starts_with("nm_"),n_pos_clean,current_rt) %>%
-    select(starts_with("nm_"),cd_dist,n_pos_clean,current_rt) %>%
+    mutate(strata_minor_x={{strata_minor}},
+           strata_major_x={{strata_major}},
+           strata_minor_code_x={{strata_minor_code}}) %>%
+    select(#starts_with("nm_"),
+      strata_major_x,strata_minor_x,strata_minor_code_x,
+      n_pos_clean,current_rt) %>%
     unnest(cols = c("current_rt")) %>%
-    cdc_dotwhiskers_ggplot(nest_level = str_c(nm_dist," - ",cd_dist),
-                           high_level = nm_depa_nest) +
+    cdc_dotwhiskers_ggplot(nest_level = str_c(strata_minor_x," - ",
+                                              strata_minor_code_x), # -------------- cuidado
+                           high_level = strata_major_x) +
     geom_vline(aes(xintercept=1),lty=2,color="red") +
-    labs(caption = "* A 14 días hacia atrás por la mediana del tiempo de rezago\nentre inicio de síntomas y confirmación de caso.",
+    labs(caption = str_c("* A ",
+                         time_delay_days,
+                         " días hacia atrás por la mediana del tiempo de rezago\nentre inicio de síntomas y confirmación de caso."),
          x="Rt actual",y="Distrito - Ubigeo",size="Número\nde casos")
 }
 
-#' @describeIn incidence_pull figure 4: map of Rt per strata
-#' @inheritParams incidence_pull
-
-nested_figure_04 <- function(data) {
+nested_figure_04 <- function(data, geometry , strata_major, strata_minor) {
 
   # rescue department name
   fig04_depa <- data %>%
-    select(nm_depa_nest) %>%
-    distinct() %>% pull(nm_depa_nest)
+    mutate(strata_major_x={{strata_major}}) %>%
+    select(strata_major_x) %>%
+    distinct() %>% pull(strata_major_x)
 
   # extract key current rt values
   a_input <- data %>%
-    select(cd_dist,nm_dist,current_rt) %>%
+    mutate(strata_minor_x={{strata_minor}}) %>%
+    select(strata_minor_x,current_rt) %>% # --------------------- cuidado
     unnest(cols = c("current_rt")) %>%
     select(-date_rt)
 
@@ -307,8 +380,10 @@ nested_figure_04 <- function(data) {
   # # a_limit %>% return()
 
   # plot
-  ubigeo_geometria %>%
-    filter(nm_depa==fig04_depa) %>%
+  geometry %>% # --------------------------------------------------------------- cambio
+    mutate(strata_major_x={{strata_major}},
+           strata_minor_x={{strata_minor}}) %>%
+    filter(strata_major_x==fig04_depa) %>%
     left_join(a_input) %>%
     ggplot() +
     geom_sf(aes(fill=rt_estimate)) +
@@ -319,34 +394,29 @@ nested_figure_04 <- function(data) {
 
 }
 
-#' @describeIn incidence_pull table 1: growth rate and doubling time. includes halving time if there is a split
-#' @inheritParams incidence_pull
-
-nested_table_01 <- function(data) {
+nested_table_01 <- function(data,strata) {
   data %>%
-    select(cd_dist,starts_with("nm_"),one_incidence_tidy,date_split_peak) %>%
+    select({{strata}},starts_with("strata_"),
+           one_incidence_tidy,date_split_peak) %>%
     unnest(cols = c(one_incidence_tidy)) %>%
-    mutate(parameter=if_else(parameter=="r","growth_rate",parameter)) %>%
-    cdc_datatable_html()
+    mutate(parameter=if_else(parameter=="r","growth_rate",parameter))
 }
 
-#' @describeIn incidence_pull table 2: goodness of fit per strata
-#' @inheritParams incidence_pull
-
-nested_table_02 <- function(data) {
+nested_table_02 <- function(data,strata) {
   data %>%
-    select(cd_dist,starts_with("nm_"),one_incidence_glance) %>%
+    select({{strata}},starts_with("strata_"),one_incidence_glance) %>%
     unnest(cols = c(one_incidence_glance)) %>%
-    select(-(df:df.residual),-sigma,-statistic) %>%
-    cdc_datatable_html()
+    select(-(df:df.residual),-sigma,-statistic)
 }
 
-#' @describeIn incidence_pull table 3: Rt per strata
-#' @inheritParams incidence_pull
-
-nested_table_03 <- function(data) {
+nested_table_03 <- function(data,strata) {
   data %>%
-    select(cd_dist,starts_with("nm_"),current_rt) %>%
-    unnest(cols = c(current_rt)) %>%
-    cdc_datatable_html()
+    select({{strata}},starts_with("strata_"),current_rt) %>%
+    unnest(cols = c(current_rt))
+}
+
+nested_table_04 <- function(data,strata) {
+  data %>%
+    select({{strata}},starts_with("strata_"),last5wk_rt) %>%
+    unnest(cols = c(last5wk_rt))
 }

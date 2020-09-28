@@ -11,27 +11,29 @@ experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](h
 status](https://www.r-pkg.org/badges/version/incidenceflow)](https://cran.r-project.org/package=incidenceflow)
 <!-- badges: end -->
 
-The goal of incidenceflow is to …
+The goal of `incidenceflow` is to provide tidy workflows using
+`incidence` and `EpiEstim` with `tidyverse` and `purrr`.
 
 ## Installation
 
-You can install the released version of incidenceflow from
-[CRAN](https://CRAN.R-project.org) with:
+<!-- You can install the released version of incidenceflow from [CRAN](https://CRAN.R-project.org) with: -->
 
 ``` r
-install.packages("incidenceflow")
+if(!require("remotes")) install.packages("remotes")
+remotes::install_github("avallecam/epichannel")
 ```
 
 ## Example
 
-This is a basic example which shows you how to solve a common problem:
+Here are two basic examples which shows you how to solve common
+problems:
 
 ``` r
 library(incidenceflow)
 ## basic example code
 ```
 
-### incidence(cially) usefull
+### Workflow 01
 
   - `get_info_tidy`: generates a tibble of `incidence::get_info()`.
     [clink here for more
@@ -47,29 +49,10 @@ library(incidenceflow)
 # packages ----------------------------------------------------------------
 
 if(!require("devtools")) install.packages("devtools")
-#> Loading required package: devtools
-#> Loading required package: usethis
 # if(!require("avallecam")) devtools::install_github("avallecam/avallecam") #improvements
 
 library(tidyverse) #magrittr and purrr packages
-#> -- Attaching packages ---------------------------------------------------------------- tidyverse 1.2.1 --
-#> v ggplot2 3.3.0     v purrr   0.3.3
-#> v tibble  3.0.3     v dplyr   1.0.1
-#> v tidyr   1.1.2     v stringr 1.4.0
-#> v readr   1.3.1     v forcats 0.5.0
-#> Warning: package 'ggplot2' was built under R version 3.6.3
-#> Warning: package 'tibble' was built under R version 3.6.3
-#> Warning: package 'dplyr' was built under R version 3.6.3
-#> Warning: package 'forcats' was built under R version 3.6.3
-#> -- Conflicts ------------------------------------------------------------------- tidyverse_conflicts() --
-#> x dplyr::filter() masks stats::filter()
-#> x dplyr::lag()    masks stats::lag()
 library(lubridate) #ymd
-#> 
-#> Attaching package: 'lubridate'
-#> The following object is masked from 'package:base':
-#> 
-#>     date
 library(outbreaks) #sample data
 library(incidence) #core functions
 
@@ -132,23 +115,12 @@ incidence_purrr <- ebola_sim$linelist %>%
                               .f = ~incidence(.x %>% pull(date_of_onset),
                                               interval=7))) %>% 
   mutate(strata_fit=map(.x = incidence_strata,
-                            .f = fit)) %>% 
+                        .f = possibly(fit,NA_real_)
+                        )) %>% 
   mutate(strata_fit_tidy=map(.x = strata_fit,
-                                  .f = tidy_incidence)) %>% 
+                                  .f = possibly(tidy_incidence,tibble()))) %>% 
   mutate(strata_fit_glance=map(.x = strata_fit,
-                                       .f = glance_incidence))
-#> Warning: Problem with `mutate()` input `strata_fit`.
-#> x 1 dates with incidence of 0 ignored for fitting
-#> i Input `strata_fit` is `map(.x = incidence_strata, .f = fit)`.
-#> i The error occurred in group 1: gender = "f".
-#> Warning in .f(.x[[i]], ...): 1 dates with incidence of 0 ignored for
-#> fitting
-#> Warning: Problem with `mutate()` input `strata_fit`.
-#> x 1 dates with incidence of 0 ignored for fitting
-#> i Input `strata_fit` is `map(.x = incidence_strata, .f = fit)`.
-#> i The error occurred in group 2: gender = "m".
-#> Warning in .f(.x[[i]], ...): 1 dates with incidence of 0 ignored for
-#> fitting
+                                       .f = possibly(glance_incidence,tibble())))
 
 # keep only the tibbles
 incidence_purrr_tibble <- incidence_purrr %>% 
@@ -179,6 +151,151 @@ incidence_purrr_tibble %>%
 #> #   deviance <dbl>, df.residual <int>
 ```
 
-## A more update approach here
+### Workflow 02
+
+  - `create_nest_dynamics`: estimate Rt per strata
+  - `create_nest_summary`: create figure and tables of incidence and Rt
+
+<!-- end list -->
+
+``` r
+linelist_raw <- ebola_sim$linelist %>% 
+  as_tibble() %>% 
+  #filter observations explicitly before incidence()
+  # filter(date_of_onset<lubridate::ymd(20141007)) %>% 
+  mutate(all="all")
+
+dictionary <- linelist_raw %>% 
+  count(all,gender) %>% 
+  rownames_to_column(var = "code")
+
+# linelist_raw %>% 
+#   group_by(gender) %>% 
+#   skimr::skim()
+```
+
+``` r
+time_delay_set = 7
+#### execute -------------------------------
+
+nest_dynamics <- create_nest_dynamics(linelist = linelist_raw,
+                                      dictionary = dictionary,
+                                      strata_major = all,
+                                      strata_minor = gender,
+                                      strata_minor_code = code, # unico para diccionario
+                                      date_incidence_case = date_of_onset,
+                                      date_of_analysis_today=FALSE,
+                                      issue_number_set = 0)
+
+nest_dynamics #%>% glimpse()
+#> # A tibble: 2 x 17
+#>   strata_major strata_minor strata_minor_co~ data  n_pre_clean n_pos_clean
+#>   <chr>        <fct>        <chr>            <lis>       <int>       <int>
+#> 1 all          f            1                <tib~        2962        2962
+#> 2 all          m            2                <tib~        2926        2926
+#> # ... with 11 more variables: one_incidence_tidy <list>,
+#> #   one_incidence_glance <list>, date_split_peak <date>,
+#> #   date_firstone <date>, date_lastone <date>, date_lastlag_days <date>,
+#> #   incidence_fit_figure <list>, tsibble_rt <list>, current_rt <list>,
+#> #   last5wk_rt <list>, rt_figure <list>
+```
+
+``` r
+#### nested figures -------------------------------
+nest_summary <- create_nest_summary(nest_dynamics = nest_dynamics,
+                                    time_limit_fig02 = Inf)
+
+nest_summary #%>% glimpse()
+#> # A tibble: 1 x 9
+#>   strata_major data     fig01  fig02  fig03 tab01   tab02   tab03   tab04  
+#>   <chr>        <list>   <list> <list> <lis> <list>  <list>  <list>  <list> 
+#> 1 all          <tibble~ <gg>   <gg>   <gg>  <tibbl~ <tibbl~ <tibbl~ <tibbl~
+```
+
+``` r
+#### if a shapefile is available ----------------------
+# nest_summary <- create_nest_summary_map(nest_dynamics = nest_dynamics,
+#                                                    geometry = ubigeo_geometria_per2,
+#                                                    strata_major=nm_pais,
+#                                                    strata_minor=nm_depa)
+```
+
+``` r
+region_name <- "all"
+
+nest_summary %>% 
+  filter(strata_major==region_name) %>% 
+  pull(fig01) %>% pluck(1)
+```
+
+<img src="man/figures/README-unnamed-chunk-7-1.png" width="100%" />
+
+``` r
+nest_summary %>% 
+  filter(strata_major==region_name) %>% 
+  pull(fig02) %>% pluck(1)
+```
+
+<img src="man/figures/README-unnamed-chunk-7-2.png" width="100%" />
+
+``` r
+nest_summary %>% 
+  filter(strata_major==region_name) %>% 
+  pull(fig03) %>% pluck(1)
+```
+
+<img src="man/figures/README-unnamed-chunk-7-3.png" width="100%" />
+
+``` r
+# nest_summary %>% 
+#   filter(strata_major==region_name) %>% 
+#   pull(fig04) %>% pluck(1)
+
+nest_summary %>% 
+  filter(strata_major==region_name) %>% 
+  pull(tab01) %>% pluck(1)
+#> # A tibble: 8 x 8
+#>   strata_minor strata_minor_co~ mark  parameter estimate conf_lower
+#>   <fct>        <chr>            <chr> <chr>        <dbl>      <dbl>
+#> 1 f            1                befo~ growth_r~  0.0212      0.0194
+#> 2 f            1                after growth_r~ -0.00958    -0.0104
+#> 3 f            1                befo~ doubling  32.7        30.2   
+#> 4 f            1                after halving   72.3        66.8   
+#> 5 m            2                befo~ growth_r~  0.0214      0.0195
+#> 6 m            2                after growth_r~ -0.0101     -0.0111
+#> 7 m            2                befo~ doubling  32.3        29.7   
+#> 8 m            2                after halving   68.4        62.4   
+#> # ... with 2 more variables: conf_upper <dbl>, date_split_peak <date>
+nest_summary %>% 
+  filter(strata_major==region_name) %>% 
+  pull(tab02) %>% pluck(1)
+#> # A tibble: 4 x 6
+#>   strata_minor strata_minor_code names  r.squared adj.r.squared  p.value
+#>   <fct>        <chr>             <chr>      <dbl>         <dbl>    <dbl>
+#> 1 f            1                 before     0.800         0.798 2.32e-50
+#> 2 f            1                 after      0.735         0.734 2.39e-61
+#> 3 m            2                 before     0.790         0.788 1.56e-46
+#> 4 m            2                 after      0.673         0.672 6.03e-51
+nest_summary %>% 
+  filter(strata_major==region_name) %>% 
+  pull(tab03) %>% pluck(1)
+#> # A tibble: 2 x 6
+#>   strata_minor strata_minor_co~ date_rt    rt_estimate rt_conf.lower
+#>   <fct>        <chr>            <date>           <dbl>         <dbl>
+#> 1 f            1                2015-04-17       0.971         0.631
+#> 2 m            2                2015-04-17       0.997         0.619
+#> # ... with 1 more variable: rt_conf.upper <dbl>
+nest_summary %>% 
+  filter(strata_major==region_name) %>% 
+  pull(tab04) %>% pluck(1)
+#> # A tibble: 2 x 7
+#>   strata_minor strata_minor_co~ `2015-W11` `2015-W12` `2015-W13` `2015-W14`
+#>   <fct>        <chr>            <chr>      <chr>      <chr>      <chr>     
+#> 1 f            1                1.03(0.71~ 0.99(0.68~ 0.93(0.62~ 0.97(0.62~
+#> 2 m            2                0.95(0.65~ 0.88(0.55~ 1.04(0.69~ 0.97(0.62~
+#> # ... with 1 more variable: `2015-W15` <chr>
+```
+
+## A more updated approach here
 
 look at this project: <https://github.com/reconhub/incidence2>

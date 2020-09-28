@@ -1,5 +1,7 @@
 ---
 output: github_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
@@ -7,10 +9,14 @@ output: github_document
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
+  warning = FALSE,
+  message = FALSE,
   comment = "#>",
   fig.path = "man/figures/README-",
   out.width = "100%"
 )
+knitr::opts_chunk$set(fig.width=10, fig.height=4)
+options(tidyverse.quiet = TRUE)
 ```
 # incidenceflow
 
@@ -19,26 +25,27 @@ knitr::opts_chunk$set(
 [![CRAN status](https://www.r-pkg.org/badges/version/incidenceflow)](https://cran.r-project.org/package=incidenceflow)
 <!-- badges: end -->
 
-The goal of incidenceflow is to ...
+The goal of `incidenceflow` is to provide tidy workflows using `incidence` and `EpiEstim` with `tidyverse` and `purrr`.
 
 ## Installation
 
-You can install the released version of incidenceflow from [CRAN](https://CRAN.R-project.org) with:
+<!-- You can install the released version of incidenceflow from [CRAN](https://CRAN.R-project.org) with: -->
 
 ``` r
-install.packages("incidenceflow")
+if(!require("remotes")) install.packages("remotes")
+remotes::install_github("avallecam/epichannel")
 ```
 
 ## Example
 
-This is a basic example which shows you how to solve a common problem:
+Here are two basic examples which shows you how to solve common problems:
 
 ```{r example}
 library(incidenceflow)
 ## basic example code
 ```
 
-### incidence(cially) usefull
+### Workflow 01
 
 - `get_info_tidy`: generates a tibble of `incidence::get_info()`. [clink here for more information](https://www.repidemicsconsortium.org/incidence/index.html).
 - `tidy_incidence`: generates a complete summary tibble from incidence fit paramteter estimates
@@ -92,11 +99,12 @@ incidence_purrr <- ebola_sim$linelist %>%
                               .f = ~incidence(.x %>% pull(date_of_onset),
                                               interval=7))) %>% 
   mutate(strata_fit=map(.x = incidence_strata,
-                            .f = fit)) %>% 
+                        .f = possibly(fit,NA_real_)
+                        )) %>% 
   mutate(strata_fit_tidy=map(.x = strata_fit,
-                                  .f = tidy_incidence)) %>% 
+                                  .f = possibly(tidy_incidence,tibble()))) %>% 
   mutate(strata_fit_glance=map(.x = strata_fit,
-                                       .f = glance_incidence))
+                                       .f = possibly(glance_incidence,tibble())))
 
 # keep only the tibbles
 incidence_purrr_tibble <- incidence_purrr %>% 
@@ -111,7 +119,90 @@ incidence_purrr_tibble %>%
   unnest(cols = c(strata_fit_glance))
 ```
 
+### Workflow 02
 
-## A more update approach here
+- `create_nest_dynamics`: estimate Rt per strata
+- `create_nest_summary`: create figure and tables of incidence and Rt
+
+```{r}
+linelist_raw <- ebola_sim$linelist %>% 
+  as_tibble() %>% 
+  #filter observations explicitly before incidence()
+  # filter(date_of_onset<lubridate::ymd(20141007)) %>% 
+  mutate(all="all")
+
+dictionary <- linelist_raw %>% 
+  count(all,gender) %>% 
+  rownames_to_column(var = "code")
+
+# linelist_raw %>% 
+#   group_by(gender) %>% 
+#   skimr::skim()
+```
+
+
+```{r}
+time_delay_set = 7
+#### execute -------------------------------
+
+nest_dynamics <- create_nest_dynamics(linelist = linelist_raw,
+                                      dictionary = dictionary,
+                                      strata_major = all,
+                                      strata_minor = gender,
+                                      strata_minor_code = code, # unico para diccionario
+                                      date_incidence_case = date_of_onset,
+                                      date_of_analysis_today=FALSE,
+                                      issue_number_set = 0)
+
+nest_dynamics #%>% glimpse()
+```
+
+```{r}
+#### nested figures -------------------------------
+nest_summary <- create_nest_summary(nest_dynamics = nest_dynamics,
+                                    time_limit_fig02 = Inf)
+
+nest_summary #%>% glimpse()
+```
+
+```{r}
+#### if a shapefile is available ----------------------
+# nest_summary <- create_nest_summary_map(nest_dynamics = nest_dynamics,
+#                                                    geometry = ubigeo_geometria_per2,
+#                                                    strata_major=nm_pais,
+#                                                    strata_minor=nm_depa)
+```
+
+```{r}
+region_name <- "all"
+
+nest_summary %>% 
+  filter(strata_major==region_name) %>% 
+  pull(fig01) %>% pluck(1)
+nest_summary %>% 
+  filter(strata_major==region_name) %>% 
+  pull(fig02) %>% pluck(1)
+nest_summary %>% 
+  filter(strata_major==region_name) %>% 
+  pull(fig03) %>% pluck(1)
+# nest_summary %>% 
+#   filter(strata_major==region_name) %>% 
+#   pull(fig04) %>% pluck(1)
+
+nest_summary %>% 
+  filter(strata_major==region_name) %>% 
+  pull(tab01) %>% pluck(1)
+nest_summary %>% 
+  filter(strata_major==region_name) %>% 
+  pull(tab02) %>% pluck(1)
+nest_summary %>% 
+  filter(strata_major==region_name) %>% 
+  pull(tab03) %>% pluck(1)
+nest_summary %>% 
+  filter(strata_major==region_name) %>% 
+  pull(tab04) %>% pluck(1)
+```
+
+## A more updated approach here
 
 look at this project: https://github.com/reconhub/incidence2
