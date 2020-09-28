@@ -20,7 +20,7 @@ The goal of `incidenceflow` is to provide tidy workflows using
 
 ``` r
 if(!require("remotes")) install.packages("remotes")
-remotes::install_github("avallecam/epichannel")
+remotes::install_github("avallecam/incidenceflow")
 ```
 
 ## Example
