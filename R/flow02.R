@@ -1,6 +1,7 @@
 #' @export create_nest_dynamics
 #' @export create_nest_summary
 #' @export create_nest_summary_map
+#' @export rt_write_rds
 #'
 
 #### purrr workflow ---------------------
@@ -249,3 +250,25 @@ create_nest_summary_map <- function(nest_dynamics,
 
 }
 
+
+rt_write_rds <- function(nest_summary,
+                         rute,
+                         id) {
+
+  for (i in 1:nrow(nest_summary)) {
+
+    ii <- if_else(str_length(as.character(i))==1,str_c("0",i),as.character(i))
+
+    nest_summary %>%
+      select(-starts_with("data")) %>%
+      slice(i) %>%
+      pivot_longer(cols = -strata_major,
+                   names_to = "object",
+                   values_to = "x") %>%
+      mutate(path=str_c({{rute}},"rt-",{{id}},"-",ii,"-",strata_major,"-",object,".rds")) %>%
+      rowwise() %>%
+      mutate(write=list(write_rds(x = x,path = path)))
+
+  }
+
+}

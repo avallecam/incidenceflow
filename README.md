@@ -221,6 +221,13 @@ nest_summary #%>% glimpse()
 ```
 
 ``` r
+#### if you want to write it -------------------------
+# rt_write_rds(nest_summary = nest_summary,
+#              rute = "",
+#              id = "admx")
+```
+
+``` r
 region_name <- "all"
 
 nest_summary %>% 
@@ -228,7 +235,7 @@ nest_summary %>%
   pull(fig01) %>% pluck(1)
 ```
 
-<img src="man/figures/README-unnamed-chunk-7-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-8-1.png" width="100%" />
 
 ``` r
 nest_summary %>% 
@@ -236,7 +243,7 @@ nest_summary %>%
   pull(fig02) %>% pluck(1)
 ```
 
-<img src="man/figures/README-unnamed-chunk-7-2.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-8-2.png" width="100%" />
 
 ``` r
 nest_summary %>% 
@@ -244,7 +251,7 @@ nest_summary %>%
   pull(fig03) %>% pluck(1)
 ```
 
-<img src="man/figures/README-unnamed-chunk-7-3.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-8-3.png" width="100%" />
 
 ``` r
 # nest_summary %>% 
