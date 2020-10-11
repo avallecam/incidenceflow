@@ -177,7 +177,7 @@ nest_summary #%>% glimpse()
 #### if you want to write it -------------------------
 # rt_write_rds(nest_summary = nest_summary,
 #              rute = "",
-#              id = "admx")
+#              name = "admx")
 ```
 
 

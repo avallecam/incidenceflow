@@ -253,7 +253,7 @@ create_nest_summary_map <- function(nest_dynamics,
 
 rt_write_rds <- function(nest_summary,
                          rute,
-                         id) {
+                         name) {
 
   for (i in 1:nrow(nest_summary)) {
 
@@ -265,10 +265,41 @@ rt_write_rds <- function(nest_summary,
       pivot_longer(cols = -strata_major,
                    names_to = "object",
                    values_to = "x") %>%
-      mutate(path=str_c({{rute}},"rt-",{{id}},"-",ii,"-",strata_major,"-",object,".rds")) %>%
+      mutate(path=str_c({{rute}},"rt-",{{name}},"-",ii,"-",strata_major,"-",object,".rds")) %>%
       rowwise() %>%
       mutate(write=list(write_rds(x = x,path = path)))
 
   }
 
 }
+
+# rt_write_rds <- function(nest_summary,
+#                          rute,
+#                          name) {
+#
+#   for (i in 1:nrow(nest_summary)) {
+#
+#     # i=1
+#     # rute = ""
+#     # name = "admx"
+#     ii <- if_else(str_length(as.character(i))==1,str_c("0",i),as.character(i))
+#
+#     nest_summary %>%
+#       select(-starts_with("data")) %>%
+#       slice(i) %>%
+#       pivot_longer(cols = -strata_major,
+#                    names_to = "object",
+#                    values_to = "x") %>%
+#       mutate(index=ii) %>%
+#       # mutate(path=str_c({{rute}},"rt-",{{name}},"-",ii,"-",strata_major,"-",object,".rds")) %>%
+#       mutate(path=str_c(rute,"rt-",name,"-",index,"-",strata_major,"-",object,".rds")) %>%
+#       #   purrr::map2(.x = .$x, .y = .$path, .f = write_rds)
+#       #   select(x,path)
+#       # purrr::map2(.x = a$x,.y = a$path,.f = write_rds)
+#       # purrr::pmap(.l = select(.,x,path),.f = write_rds)
+#       rowwise() %>%
+#       mutate(write=list(write_rds(x = x,path = path)))
+#
+#   }
+#
+# }
