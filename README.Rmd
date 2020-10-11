@@ -119,6 +119,18 @@ incidence_purrr_tibble %>%
   unnest(cols = c(strata_fit_glance))
 ```
 
+#### Rus this as a `learnr` tutorial
+
+```r
+# install package
+if(!require("remotes")) install.packages("remotes")
+remotes::install_github("avallecam/incidenceflow")
+# install learner and run tutorial
+if(!require("learnr")) install.packages("learnr")
+learnr::run_tutorial(name = "taller",package = "incidenceflow")
+```
+
+
 ### Workflow 02
 
 - `create_nest_dynamics`: estimate Rt per strata

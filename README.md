@@ -151,6 +151,17 @@ incidence_purrr_tibble %>%
 #> #   deviance <dbl>, df.residual <int>
 ```
 
+#### Rus this as a `learnr` tutorial
+
+``` r
+# install package
+if(!require("remotes")) install.packages("remotes")
+remotes::install_github("avallecam/incidenceflow")
+# install learner and run tutorial
+if(!require("learnr")) install.packages("learnr")
+learnr::run_tutorial(name = "taller",package = "incidenceflow")
+```
+
 ### Workflow 02
 
   - `create_nest_dynamics`: estimate Rt per strata
@@ -224,7 +235,7 @@ nest_summary #%>% glimpse()
 #### if you want to write it -------------------------
 # rt_write_rds(nest_summary = nest_summary,
 #              rute = "",
-#              id = "admx")
+#              name = "admx")
 ```
 
 ``` r
