@@ -1,7 +1,9 @@
 #' @export create_nest_dynamics
 #' @export create_nest_summary
 #' @export create_nest_summary_map
-#' @export rt_write_rds
+#' @export create_nest_doubling
+#' @export create_nest_halving
+#' @export create_nest_rt
 #'
 
 #### purrr workflow ---------------------
@@ -159,6 +161,31 @@ create_nest_dynamics <- function(linelist,
     mutate(rt_figure=pmap(.l = select(., epiestim_tibble_r=tsibble_rt, title_rt=strata_minor),
                           .f = possibly(figure_tsibble_rt,NA_real_))) %>%
 
+    # %>%
+    # mutate(week_incidence_case=aweek::date2week(date_incidence_case,
+    #                                             week_start = "Sunday",
+    #                                             floor_day = T))
+
+    mutate(data=map(.x = data,
+                    .f = mutate,
+                    week_incidence_case=aweek::date2week(date_incidence_case,
+                                                         week_start = "Sunday",
+                                                         floor_day = T))) %>%
+    mutate(tsibble_day=map(.x = data,
+                           .f = count,
+                           date_incidence_case)) %>%
+    mutate(tsibble_wik=map(.x = data,
+                           .f = count,
+                           week_incidence_case)) %>%
+    mutate(tsibble_wik=map(.x = tsibble_wik,
+                           .f = mutate,
+                           date_incidence_case = aweek::week2date(week_incidence_case,
+                                                                  week_start = "Sunday"))) %>%
+    mutate(tsibble_wik=map(.x = tsibble_wik,
+                           .f = select,
+                           starts_with("strata_"),ends_with("_incidence_case"),
+                           everything())) %>%
+
     select(-starts_with("i_"),
            -one_incidence_fit,
            -incidente_rt,#-tsibble_rt,
@@ -181,7 +208,7 @@ create_nest_summary <- function(nest_dynamics,time_limit_fig02=90) {
     nest() %>%
     ungroup()
 
-  for (i in 1:nrow(nested_major)) {
+  for (i in 1:nrow(nested_major)) { #i=1
 
     out <- nested_major %>%
 
@@ -251,27 +278,83 @@ create_nest_summary_map <- function(nest_dynamics,
 }
 
 
-rt_write_rds <- function(nest_summary,
-                         rute,
-                         name) {
+create_nest_doubling <- function(nest_dynamics) {
 
-  for (i in 1:nrow(nest_summary)) {
+  growth_fit <- nest_dynamics %>%
+    select(starts_with("strata_"),n_pre_clean,n_pos_clean,one_incidence_glance) %>%
+    unnest(one_incidence_glance) %>% #count(names)
+    mutate(mark=if_else(is.na(names),"1",names)) %>% #count(mark)
+    # filter(is.na(names)) %>%
+    # filter(magrittr::is_in(mark,c("1"))) %>%
+    select(strata_minor_code,mark,contains("r."),p.value)
 
-    ii <- if_else(str_length(as.character(i))==1,str_c("0",i),as.character(i))
+  dt_national_up <- nest_dynamics %>%
+    select(starts_with("strata_"),n_pre_clean,n_pos_clean,one_incidence_tidy) %>%
+    unnest(one_incidence_tidy) %>% #count(mark)
+    filter(magrittr::is_in(mark,c("1"))) %>%
+    filter(parameter=="doubling") %>%
+    left_join(growth_fit) %>%
+    arrange(estimate) #%>%
+  # cdcper::cdc_datatable_html()
 
-    nest_summary %>%
-      select(-starts_with("data")) %>%
-      slice(i) %>%
-      pivot_longer(cols = -strata_major,
-                   names_to = "object",
-                   values_to = "x") %>%
-      mutate(path=str_c({{rute}},"rt-",{{name}},"-",ii,"-",strata_major,"-",object,".rds")) %>%
-      rowwise() %>%
-      mutate(write=list(write_rds(x = x,path = path)))
-
-  }
-
+  return(dt_national_up)
 }
+
+create_nest_halving <- function(nest_dynamics) {
+
+  growth_fit <- nest_dynamics %>%
+    select(starts_with("strata_"),n_pre_clean,n_pos_clean,one_incidence_glance) %>%
+    unnest(one_incidence_glance) %>% #count(names)
+    mutate(mark=if_else(is.na(names),"1",names)) %>% #count(mark)
+    # filter(is.na(names)) %>%
+    # filter(magrittr::is_in(mark,c("1"))) %>%
+    select(strata_minor_code,mark,contains("r."),p.value)
+
+  dt_national_dowm <- nest_dynamics %>%
+    select(starts_with("strata_"),n_pre_clean,n_pos_clean,one_incidence_tidy) %>%
+    unnest(one_incidence_tidy) %>% #count(mark)
+    filter(magrittr::is_in(mark,c("after"))) %>%
+    filter(parameter=="halving") %>%
+    left_join(growth_fit) %>%
+    arrange(estimate) #%>%
+  #cdcper::cdc_datatable_html()
+
+  return(dt_national_dowm)
+}
+
+create_nest_rt <- function(nest_dynamics) {
+  rt_national <- nest_dynamics %>%
+    select(starts_with("strata_"),n_pre_clean,n_pos_clean,current_rt) %>%
+    unnest(current_rt) %>%
+    arrange(desc(rt_estimate)) #%>%
+  # cdcper::cdc_datatable_html()
+
+  return(rt_national)
+}
+
+
+
+# rt_write_rds <- function(nest_summary,
+#                          rute,
+#                          name) {
+#
+#   for (i in 1:nrow(nest_summary)) {
+#
+#     ii <- if_else(str_length(as.character(i))==1,str_c("0",i),as.character(i))
+#
+#     nest_summary %>%
+#       select(-starts_with("data")) %>%
+#       slice(i) %>%
+#       pivot_longer(cols = -strata_major,
+#                    names_to = "object",
+#                    values_to = "x") %>%
+#       mutate(path=str_c({{rute}},"rt-",{{name}},"-",ii,"-",strata_major,"-",object,".rds")) %>%
+#       rowwise() %>%
+#       mutate(write=list(write_rds(x = x,path = path)))
+#
+#   }
+#
+# }
 
 # rt_write_rds <- function(nest_summary,
 #                          rute,

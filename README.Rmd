@@ -18,6 +18,14 @@ knitr::opts_chunk$set(
 knitr::opts_chunk$set(fig.width=10, fig.height=4)
 options(tidyverse.quiet = TRUE)
 ```
+
+
+<br>
+**<span style="color: red;">Disclaimer</span>**
+
+This package is a work in progress. It has been released to get feedback from 
+users that we can incorporate in future releases.
+
 # incidenceflow
 
 <!-- badges: start -->
@@ -47,7 +55,7 @@ library(incidenceflow)
 
 ### Workflow 01
 
-- `get_info_tidy`: generates a tibble of `incidence::get_info()`. [clink here for more information](https://www.repidemicsconsortium.org/incidence/index.html).
+- `get_info_tidy`: generates a tibble of `incidence::get_info()`. [click here for more information](https://www.repidemicsconsortium.org/incidence/index.html).
 - `tidy_incidence`: generates a complete summary tibble from incidence fit paramteter estimates
 - `glance_incidence`: generates a complete summary tibble from incidence fit model performance
 
@@ -119,7 +127,7 @@ incidence_purrr_tibble %>%
   unnest(cols = c(strata_fit_glance))
 ```
 
-#### Rus this as a `learnr` tutorial
+#### Run this as a `learnr` tutorial
 
 ```r
 # install package
@@ -166,7 +174,7 @@ nest_dynamics <- create_nest_dynamics(linelist = linelist_raw,
                                       date_of_analysis_today=FALSE,
                                       issue_number_set = 0)
 
-nest_dynamics #%>% glimpse()
+nest_dynamics #nest_dynamics %>% glimpse()
 ```
 
 ```{r}
@@ -185,7 +193,7 @@ nest_summary #%>% glimpse()
 #                                                    strata_minor=nm_depa)
 ```
 
-```{r}
+```{r,eval=FALSE,echo=FALSE}
 #### if you want to write it -------------------------
 # rt_write_rds(nest_summary = nest_summary,
 #              rute = "",
@@ -228,3 +236,7 @@ nest_summary %>%
 - on incidence: https://github.com/reconhub/incidence2
 
 - on time-varying transmission: https://epiforecasts.io/EpiNow2/
+
+## To do list
+
+- Document functions

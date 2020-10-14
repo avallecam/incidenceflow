@@ -1,6 +1,11 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
+<br> **<span style="color: red;">Disclaimer</span>**
+
+This package is a work in progress. It has been released to get feedback
+from users that we can incorporate in future releases.
+
 # incidenceflow
 
 <!-- badges: start -->
@@ -36,7 +41,7 @@ library(incidenceflow)
 ### Workflow 01
 
   - `get_info_tidy`: generates a tibble of `incidence::get_info()`.
-    [clink here for more
+    [click here for more
     information](https://www.repidemicsconsortium.org/incidence/index.html).
   - `tidy_incidence`: generates a complete summary tibble from incidence
     fit paramteter estimates
@@ -151,7 +156,7 @@ incidence_purrr_tibble %>%
 #> #   deviance <dbl>, df.residual <int>
 ```
 
-#### Rus this as a `learnr` tutorial
+#### Run this as a `learnr` tutorial
 
 ``` r
 # install package
@@ -198,17 +203,18 @@ nest_dynamics <- create_nest_dynamics(linelist = linelist_raw,
                                       date_of_analysis_today=FALSE,
                                       issue_number_set = 0)
 
-nest_dynamics #%>% glimpse()
-#> # A tibble: 2 x 17
+nest_dynamics #nest_dynamics %>% glimpse()
+#> # A tibble: 2 x 19
 #>   strata_major strata_minor strata_minor_co~ data  n_pre_clean n_pos_clean
 #>   <chr>        <fct>        <chr>            <lis>       <int>       <int>
 #> 1 all          f            1                <tib~        2962        2962
 #> 2 all          m            2                <tib~        2926        2926
-#> # ... with 11 more variables: one_incidence_tidy <list>,
+#> # ... with 13 more variables: one_incidence_tidy <list>,
 #> #   one_incidence_glance <list>, date_split_peak <date>,
 #> #   date_firstone <date>, date_lastone <date>, date_lastlag_days <date>,
 #> #   incidence_fit_figure <list>, tsibble_rt <list>, current_rt <list>,
-#> #   last5wk_rt <list>, rt_figure <list>
+#> #   last5wk_rt <list>, rt_figure <list>, tsibble_day <list>,
+#> #   tsibble_wik <list>
 ```
 
 ``` r
@@ -229,13 +235,6 @@ nest_summary #%>% glimpse()
 #                                                    geometry = ubigeo_geometria_per2,
 #                                                    strata_major=nm_pais,
 #                                                    strata_minor=nm_depa)
-```
-
-``` r
-#### if you want to write it -------------------------
-# rt_write_rds(nest_summary = nest_summary,
-#              rute = "",
-#              name = "admx")
 ```
 
 ``` r
@@ -319,3 +318,7 @@ nest_summary %>%
   - on incidence: <https://github.com/reconhub/incidence2>
 
   - on time-varying transmission: <https://epiforecasts.io/EpiNow2/>
+
+## To do list
+
+  - Document functions

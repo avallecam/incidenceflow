@@ -14,7 +14,10 @@ Suggests:
     knitr,
     rmarkdown,
     incidence,
-    EpiEstim
+    EpiEstim,
+    aweek,
+    janitor,
+    patchwork
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
