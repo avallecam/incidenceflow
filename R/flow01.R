@@ -300,7 +300,8 @@ figure_tsibble_rt <- function(epiestim_tibble_rt,
     geom_hline(aes(yintercept=1),colour="red") +
     scale_color_grey(start = 0.1) +
     scale_fill_grey(start = 0.7) +
-    scale_y_continuous(breaks = scales::pretty_breaks(n = y_breaks)) +
+    scale_y_continuous(breaks = scales::pretty_breaks(n = y_breaks),
+                       limits=c(0,NA)) +
     # scale_x_date(date_breaks = date_breaks,date_labels = "%b-%d") +
     theme(axis.text.x = element_text(angle = 90, hjust = 1)#,
           # legend.background = element_rect(fill="white",size=0,
