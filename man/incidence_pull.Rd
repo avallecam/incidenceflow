@@ -4,9 +4,15 @@
 \alias{cdc_dotwhiskers_ggplot}
 \title{MAIN TITLE}
 \usage{
-cdc_dotwhiskers_ggplot(data, nest_level = nm_dist,
-  high_level = nm_depa, order = n_pos_clean, point = rt_estimate,
-  xmax = rt_conf.upper, xmin = rt_conf.lower)
+cdc_dotwhiskers_ggplot(
+  data,
+  nest_level = nm_dist,
+  high_level = nm_depa,
+  order = n_pos_clean,
+  point = rt_estimate,
+  xmax = rt_conf.upper,
+  xmin = rt_conf.lower
+)
 }
 \value{
 incidence workflow!

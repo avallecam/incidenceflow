@@ -9,7 +9,7 @@ Authors@R:
            comment = c(ORCID = "YOUR-ORCID-ID"))
 Description: What the package does (one paragraph).
 License: GPL-3
-Suggests: 
+Imports: 
     testthat,
     knitr,
     rmarkdown,
@@ -17,9 +17,12 @@ Suggests:
     EpiEstim,
     aweek,
     janitor,
-    patchwork
+    patchwork,
+    colorspace,
+    tidyverse,
+    lubridate
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 6.1.1
+RoxygenNote: 7.1.1
 VignetteBuilder: knitr

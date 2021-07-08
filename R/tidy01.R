@@ -9,10 +9,7 @@
 #'
 #' @return incidence tibbles!
 #'
-#' @import dplyr
-#' @import tidyr
-#' @import tibble
-#' @import stringr
+#' @import tidyverse
 #' @import incidence
 #'
 #' @examples
